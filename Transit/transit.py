@@ -97,16 +97,15 @@ def init_db(conn):
         print "station_totals could not be dropped"
     c.execute('''CREATE TABLE station_totals
                 (stop_id text, turnstile_count integer, DATE integer, ENTRIES integer, EXITS integer, stop_name)''')
-    #To get daily totals, we compare the starting and ending values.
-    c.execute('''select UNIT, count(SCP), DATE, SUM(ENTRIES), SUM(EXITS), stop_name
+    #Sort the daily totals by date and station
+    c.execute('''select UNIT, count(UNIT), DATE, SUM(ENTRIES), SUM(EXITS), stop_name
                 from turnstile_totals
                 group by DATE, UNIT''')
     results = c.fetchall()
-    for i 
-            t = (starts[i][0], starts[i][1], starts[i][2], starts[i][3], starts[i+1][5] - starts[i][5], starts[i+1][6] - starts[i][6], starts[i][7])
-            c.execute('INSERT INTO turnstile_totals VALUES (?,?,?,?,?,?,?)', t)
-    
-    
+    for row in results:
+        t = (row[0], row[1], row[2], row[3], row[4], row[5])
+        c.execute('INSERT INTO station_totals VALUES (?,?,?,?,?,?)', row)
+        
     # Save (commit) the changes
     conn.commit()
 
