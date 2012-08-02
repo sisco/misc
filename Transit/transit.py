@@ -8,7 +8,7 @@ names = dict()
 def main():
     #Establish connection to the db.
     conn = sqlite3.connect('turnstile.db')
-    
+    c = conn.cursor()
     while True:
         x = raw_input("Input: ")
         if x == "init":
@@ -17,12 +17,23 @@ def main():
             return "Goodbye"
         elif x == "pass":
             continue
-        else:
+        elif x == "%":
+            #Show stations with x% more entries than exits.
+            x = raw_input("Enter % increase of entries over exits: ")
+            query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and date = '07-14-12'"
+            print_all_rows(c, query)
+        elif x == "b":
+            #b for builtin, execute whatever line is put here
+            
             #x = "select exits from raw_data where entries = 3721212"
             #x = "select entries from raw_data where CA = 'A002'"
-            x = "select * from turnstile_totals where stop_name = 'FULTON ST'"
+            #x = "select * from turnstile_totals where stop_name = 'FULTON ST'"
             #x = "select * from turnstile_totals where UNIT = 'R36'"
-            c = conn.cursor()
+            x = "select * from turnstile_totals where UNIT = 'R085' and date = '07-14-12'"
+            
+            print_all_rows(c, x)
+        else:
+            
             #This is absolutely not secure.
             try:
                 c.execute(x)
@@ -32,6 +43,16 @@ def main():
                 print "Invalid SQL"
             conn.commit()
     return "success"
+
+def print_all_rows(c, query):
+    #Print all results of the given query. Must be passed a cursor.
+    try:
+        c.execute(query)
+        rows = c.fetchall()
+        for row in rows:
+            print row
+    except sqlite3.OperationalError:
+        print "Invalid SQL"
     
 def init_db(conn):
     #Create the tables and initialize the database.
@@ -96,12 +117,12 @@ def init_db(conn):
     except sqlite3.OperationalError:
         print "station_totals could not be dropped"
     c.execute('''CREATE TABLE station_totals
-                (stop_id text, turnstile_count integer, DATE integer, ENTRIES integer, EXITS integer, stop_name)''')
+                (stop_id text, turnstile_count integer, DATE integer, ENTRIES integer, EXITS integer, stop_name text)''')
     #Sort the daily totals by date and station
     c.execute('''select UNIT, count(UNIT), DATE, SUM(ENTRIES), SUM(EXITS), stop_name
                 from turnstile_totals
                 group by DATE, UNIT''')
-    results = c.fetchall()
+    results = c.fetchall() 
     for row in results:
         t = (row[0], row[1], row[2], row[3], row[4], row[5])
         c.execute('INSERT INTO station_totals VALUES (?,?,?,?,?,?)', row)
