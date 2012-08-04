@@ -13,6 +13,8 @@ def main():
         x = raw_input("Input: ")
         if x == "init":
             init_db(conn)
+        elif x == "d":
+            download_turnstile_files()
         elif x == "quit" or x == "q":
             return "Goodbye"
         elif x == "pass":
@@ -21,6 +23,10 @@ def main():
             #Show stations with x% more entries than exits.
             x = raw_input("Enter % increase of entries over exits: ")
             query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and date = '07-14-12'"
+            print_all_rows(c, query)
+        elif x == "/":
+            #Show stations with the highest ratio of entrances/exits.
+            query = "select stop_name, date, entries, exits, entries/exits as ratio from station_totals order by ratio desc limit 10"
             print_all_rows(c, query)
         elif x == "b":
             #b for builtin, execute whatever line is put here
@@ -50,7 +56,7 @@ def print_all_rows(c, query):
         c.execute(query)
         rows = c.fetchall()
         for row in rows:
-            print row
+            print [str(i) for i in row if not unicode(i).isnumeric()] + [i for i in row if unicode(i).isnumeric()]
     except sqlite3.OperationalError:
         print "Invalid SQL"
     
@@ -149,6 +155,33 @@ def parse_turnstile_file(file, c):
         for i in xrange(3, len(pieces) - 5, 5):
             t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], names[UNIT])
             c.execute('INSERT INTO raw_data VALUES (?,?,?,?,?,?,?,?)', t)
+
+def download_turnstile_files():
+    #Download all data files listed on http://www.mta.info/developers/turnstile.html
+    from lxml import etree
+    parser = etree.HTMLParser()
+    tree = etree.parse("http://www.mta.info/developers/turnstile.html", parser)
+    
+    #The list the urls will go in.
+    urls = []
+    #Uses an XPATH expression to find the div that contains the list of data files.
+    r = tree.find(".//div[@class='span-14 last']")
+    #for each element in the div, if it is an <a>, we put the url in the list
+    for child in r:
+        if child.tag == 'a':
+            urls.append(child.get('href'))
+    
+    #The following actually downloads the files. Let's use wget for now, though.
+    #import urllib2        
+    #for url in urls:
+    #    f = urllib2.urlopen("http://www.mta.info/developers/" + url)
+    #    with open(url.split('/')[-1], "wb") as code:
+    #        code.write(f.read())
+   
+    f = open("data/links.txt", "a")
+    for url in urls:
+        f.write("http://www.mta.info/developers/" + url + '\n')
+    #In CMD, navigate to /data, then execute wget -i links.txt
     
 if __name__ == "__main__":
     print main()
