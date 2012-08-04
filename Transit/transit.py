@@ -28,7 +28,7 @@ def main():
             print main.__doc__
         elif x == "init":
             init_db(conn)
-        elif x == "d":
+        elif x == "download" or x == "d":
             download_turnstile_files()
         elif x == "quit" or x == "q":
             return "Goodbye"
@@ -166,7 +166,10 @@ def parse_turnstile_file(file, c):
         SCP = pieces[2]
         #This loop has us iterate over each date/time/entries/exits set.
         for i in xrange(3, len(pieces) - 5, 5):
-            t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], names[UNIT])
+            if UNIT in names:
+                t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], names[UNIT])
+            else:
+                t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], UNIT)
             c.execute('INSERT INTO raw_data VALUES (?,?,?,?,?,?,?,?)', t)
 
 def download_turnstile_files():
