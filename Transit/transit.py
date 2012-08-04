@@ -6,12 +6,27 @@ import sqlite3
 names = dict()
 
 def main():
+    """Performs various sorts of transit data analysis.
+    Options:
+    help    This info.
+    q       Or quit.
+    init    Drop/add tables, populate with data from existing files.
+    d       Download turnstile data files form MTA.info
+    %       Show stations with x% more entries than exits.
+    /       Show stations with the highest ratio of entrances/exits.
+    
+    Any other input is interpreted as an SQL command with results displayed.
+    
+    """
+    
     #Establish connection to the db.
     conn = sqlite3.connect('turnstile.db')
     c = conn.cursor()
     while True:
         x = raw_input("Input: ")
-        if x == "init":
+        if x == "help" or x == "h":
+            print main.__doc__
+        elif x == "init":
             init_db(conn)
         elif x == "d":
             download_turnstile_files()
@@ -42,9 +57,7 @@ def main():
             
             #This is absolutely not secure.
             try:
-                c.execute(x)
-                print c.fetchone()
-                
+                print_all_rows(c, x)   
             except sqlite3.OperationalError:
                 print "Invalid SQL"
             conn.commit()
