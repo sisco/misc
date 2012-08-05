@@ -29,7 +29,11 @@ def main():
         elif x == "init":
             init_db(conn)
         elif x == "download" or x == "d":
-            download_turnstile_files()
+            input = raw_input("Download all files or new files? (all/new) ")
+            if input == "all" or input == "a":
+                download_turnstile_files()
+            else:
+                download_new_turnstile_files()
         elif x == "quit" or x == "q":
             return "Goodbye"
         elif x == "pass":
@@ -50,8 +54,8 @@ def main():
             #x = "select entries from raw_data where CA = 'A002'"
             #x = "select * from turnstile_totals where stop_name = 'FULTON ST'"
             #x = "select * from turnstile_totals where UNIT = 'R36'"
-            x = "select * from turnstile_totals where UNIT = 'R085' and date = '07-14-12'"
-            
+            #x = "select * from turnstile_totals where UNIT = 'R085' and date = '07-14-12'"
+            x = "select * from station_totals where stop_name = 'ST. GEORGE' order by ENTRIES desc"
             print_all_rows(c, x)
         else:
             
@@ -119,7 +123,7 @@ def init_db(conn):
     except sqlite3.OperationalError:
         print "turnstile_totals could not be dropped"
     c.execute('''CREATE TABLE turnstile_totals
-                (CA text, UNIT text, SCP text, DATE integer, ENTRIES integer, EXITS integer, stop_name)''')
+                (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name)''')
     #To get daily totals, we compare the starting and ending values.
     c.execute('''select * from raw_data where TIME = "00:00:00"''')
     starts = c.fetchall()
@@ -136,7 +140,7 @@ def init_db(conn):
     except sqlite3.OperationalError:
         print "station_totals could not be dropped"
     c.execute('''CREATE TABLE station_totals
-                (stop_id text, turnstile_count integer, DATE integer, ENTRIES integer, EXITS integer, stop_name text)''')
+                (stop_id text, turnstile_count integer, DATE text, ENTRIES integer, EXITS integer, stop_name text)''')
     #Sort the daily totals by date and station
     c.execute('''select UNIT, count(UNIT), DATE, SUM(ENTRIES), SUM(EXITS), stop_name
                 from turnstile_totals
@@ -198,6 +202,10 @@ def download_turnstile_files():
     for url in urls:
         f.write("http://www.mta.info/developers/" + url + '\n')
     #In CMD, navigate to /data, then execute wget -i links.txt
+
+def download_new_turnstile_files():
+    #Check for and download data files that haven't yet been downloaded.
+    pass
     
 if __name__ == "__main__":
     print main()
