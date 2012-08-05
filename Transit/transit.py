@@ -115,7 +115,6 @@ def init_db(conn):
     #Iterate over each datafile, adding the info to the db.
     import glob
     for file in glob.glob("data/turnstile_*.txt"):
-        print file
         parse_turnstile_file(file, c)
     
     try:
@@ -175,9 +174,11 @@ def parse_turnstile_file(file, c):
             else:
                 t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], UNIT)
             c.execute('INSERT INTO raw_data VALUES (?,?,?,?,?,?,?,?)', t)
-
+    print file + " parsed"
+    
 def download_turnstile_files():
     #Download all data files listed on http://www.mta.info/developers/turnstile.html
+    #If the webpage's address changes, this will have to be updated.
     from lxml import etree
     parser = etree.HTMLParser()
     tree = etree.parse("http://www.mta.info/developers/turnstile.html", parser)
@@ -205,8 +206,46 @@ def download_turnstile_files():
 
 def download_new_turnstile_files():
     #Check for and download data files that haven't yet been downloaded.
-    pass
+    from lxml import etree
+    parser = etree.HTMLParser()
+    tree = etree.parse("http://www.mta.info/developers/turnstile.html", parser)
     
+    urls = []
+    #Open the links.txt file. We will be checking new urls against the already listed ones.
+    with open("data/links.txt", "r+") as f:
+        for line in f:
+            urls.append(line.rstrip())
+    
+    #Uses an XPATH expression to find the div that contains the list of data files.
+    r = tree.find(".//div[@class='span-14 last']")
+    #for each element in the div, if it is an <a>, we keep it if it isn't in the list of existing urls
+    newurls = []
+    for child in r:
+        if child.tag == 'a':
+            #The URLs on the page are relative. If the website's structure were to change, this will have to be updated.
+            curr = "http://www.mta.info/developers/" + child.get('href')
+            if curr not in urls:
+                newurls.append(curr)
+    
+    print str(len(newurls)) + " files found to download."
+    if len(newurls) > 0:
+        import urllib2
+        #We are writing the newly downloaded files' names to this file for future reference.
+        with open("data/links.txt", "a") as links:
+            print "Downloading..."
+            #for each file not yet downloaded
+            for url in newurls:
+                #open the url
+                f = urllib2.urlopen(url)
+                #Python's with (as) statement can automate some things, in this case it closes the file for us
+                #open a local file
+                with open(url.split('/')[-1], "wb") as code:
+                    #write the url's contents to the local file
+                    code.write(f.read())
+                    #write the url to the links file so we don't download it next time.
+                    links.write(url)
+                    print "Downloaded:" + url
+                
 if __name__ == "__main__":
     print main()
     
