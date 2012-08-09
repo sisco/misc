@@ -40,9 +40,22 @@ def main():
             continue
         elif x == "%":
             #Show stations with x% more entries than exits.
-            x = raw_input("Enter % increase of entries over exits: ")
-            query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and date = '07-14-12'"
-            print_all_rows(c, query)
+            x = raw_input("Enter min (or min and max) % increase of entries over exits: ")
+            date = "'07-14-12'"
+            if unicode(x).isnumeric():
+                query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and date = " + date
+                print_all_rows(c, query)
+            else:
+                split = x.split(',')
+                x = split[0].strip()
+                y = split[1].strip()
+                if len(split) > 1 and unicode(x).isnumeric() and unicode(y).isnumeric():
+                    query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and entries < (exits * " + str(1.0 + float(y)/100) + ") and date = " + date
+                    print_all_rows(c, query)
+                else:
+                    print "Error: Invalid input. Enter comma separated two numbers to perform this action."
+                
+            
         elif x == "/":
             #Show stations with the highest ratio of entrances/exits.
             query = "select stop_name, date, entries, exits, entries/exits as ratio from station_totals order by ratio desc limit 10"
@@ -74,6 +87,7 @@ def print_all_rows(c, query):
         rows = c.fetchall()
         for row in rows:
             print [str(i) for i in row if not unicode(i).isnumeric()] + [i for i in row if unicode(i).isnumeric()]
+        print "Results: " + str(len(rows))
     except sqlite3.OperationalError:
         print "Invalid SQL"
     
