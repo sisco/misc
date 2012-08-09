@@ -39,22 +39,24 @@ def main():
         elif x == "pass":
             continue
         elif x == "%":
-            #Show stations with x% more entries than exits.
+            #Show stations with x% more entries than exits or between x% and y% more entries than exits.
             x = raw_input("Enter min (or min and max) % increase of entries over exits: ")
             date = "'07-14-12'"
-            if unicode(x).isnumeric():
+            if is_number(x):
                 query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and date = " + date
                 print_all_rows(c, query)
             else:
-                split = x.split(',')
-                x = split[0].strip()
-                y = split[1].strip()
-                if len(split) > 1 and unicode(x).isnumeric() and unicode(y).isnumeric():
-                    query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and entries < (exits * " + str(1.0 + float(y)/100) + ") and date = " + date
-                    print_all_rows(c, query)
+                if ',' in x:
+                    split = x.split(',')
+                    x = split[0].strip()
+                    y = split[1].strip()
+                    if len(split) > 1 and is_number(x) and is_number(y):
+                        query = "select stop_name, entries, exits from station_totals where entries > (exits * " + str(1.0 + float(x)/100) + ") and entries < (exits * " + str(1.0 + float(y)/100) + ") and date = " + date
+                        print_all_rows(c, query)
+                    else:
+                        print "Error: Invalid input. Enter two comma separated numbers to perform this action."
                 else:
-                    print "Error: Invalid input. Enter comma separated two numbers to perform this action."
-                
+                    print "Error: Enter one number or two comma separated numbers."
             
         elif x == "/":
             #Show stations with the highest ratio of entrances/exits.
@@ -90,7 +92,7 @@ def print_all_rows(c, query):
         print "Results: " + str(len(rows))
     except sqlite3.OperationalError:
         print "Invalid SQL"
-    
+        
 def init_db(conn):
     #Create the tables and initialize the database.
     #Reference: http://docs.python.org/library/sqlite3.html
@@ -168,6 +170,13 @@ def init_db(conn):
 
     # We can also close the cursor if we are done with it
     c.close()
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 def parse_turnstile_file(file, c):
     #Insert into db the data from a turnstile data file.
