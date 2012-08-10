@@ -62,6 +62,11 @@ def main():
             #Show stations with the highest ratio of entrances/exits.
             query = "select stop_name, date, entries, exits, entries/exits as ratio from station_totals order by ratio desc limit 10"
             print_all_rows(c, query)
+        elif x == "-/":
+            #Show stations with the highest ratio of exits/entrances.
+            query = "select stop_name, date, entries, exits, exits/entries as ratio from station_totals order by ratio desc limit 10"
+            print_all_rows(c, query)
+            
         elif x == "b":
             #b for builtin, execute whatever line is put here
             
