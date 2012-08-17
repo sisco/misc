@@ -237,11 +237,12 @@ def download_turnstile_files():
         if child.tag == 'a':
             urls.append(child.get('href'))
     
-    #The following actually downloads the files. Let's use wget for now, though.
+    #The following actually downloads the files. 
+    #This would take a long time, so for now let's have it be done elsewhere, using wget.
     #import urllib2        
     #for url in urls:
     #    f = urllib2.urlopen("http://www.mta.info/developers/" + url)
-    #    with open(url.split('/')[-1], "wb") as code:
+    #    with open("data/" + url.split('/')[-1], "wb") as code:
     #        code.write(f.read())
    
     f = open("data/links.txt", "a")
