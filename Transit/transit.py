@@ -270,7 +270,7 @@ def download_new_turnstile_files():
             #The URLs on the page are relative. If the website's structure were to change, this will have to be updated.
             curr = "http://www.mta.info/developers/" + child.get('href')
             if curr not in urls:
-                newurls.append(curr)
+                newurls.append("\n" + curr)
     
     print str(len(newurls)) + " files found to download."
     if len(newurls) > 0:
@@ -284,7 +284,7 @@ def download_new_turnstile_files():
                 f = urllib2.urlopen(url)
                 #Python's with (as) statement can automate some things, in this case it closes the file for us
                 #open a local file
-                with open(url.split('/')[-1], "wb") as code:
+                with open("data/" + url.split('/')[-1], "wb") as code:
                     #write the url's contents to the local file
                     code.write(f.read())
                     #write the url to the links file so we don't download it next time.
