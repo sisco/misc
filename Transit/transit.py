@@ -14,6 +14,8 @@ def main():
     d       Download turnstile data files form MTA.info
     %       Show stations with x% more entries than exits.
     /       Show stations with the highest ratio of entrances/exits.
+    +       Show stations with the greatest difference between entrances and exits.
+    crowded Show stations with the greatest entries per turnstile.
     
     Any other input is interpreted as an SQL command with results displayed.
     
@@ -69,9 +71,17 @@ def main():
             
         elif x == "+":
             #Show stations with the greatest difference between entrances and exits.
+            print "Stations with the greatest difference between entrances and exits."
+            print "Stop name, Date, Entries, Exits"
             query = "select stop_name, date, entries, exits from station_totals order by entries - exits desc limit 10"
             print_all_rows(c, query)    
             
+        elif x == "crowded":
+            #Show stations with the greatest entries per turnstile.
+            print "Stations with the greatest entries per turnstile."
+            print "Stop name, Date, Entries, # turnstiles, Ratio"
+            query = "select stop_name, date, entries, turnstile_count, ROUND((CAST(entries AS REAL)/turnstile_count), 2) as ratio from station_totals order by ratio DESC limit 10"
+            print_all_rows(c, query)
         elif x == "b":
             #b for builtin, execute whatever line is put here
             
