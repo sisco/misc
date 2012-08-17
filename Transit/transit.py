@@ -67,6 +67,11 @@ def main():
             query = "select stop_name, date, entries, exits, exits/entries as ratio from station_totals order by ratio desc limit 10"
             print_all_rows(c, query)
             
+        elif x == "+":
+            #Show stations with the greatest difference between entrances and exits.
+            query = "select stop_name, date, entries, exits from station_totals order by entries - exits desc limit 10"
+            print_all_rows(c, query)    
+            
         elif x == "b":
             #b for builtin, execute whatever line is put here
             
@@ -93,7 +98,8 @@ def print_all_rows(c, query):
         c.execute(query)
         rows = c.fetchall()
         for row in rows:
-            print [str(i) for i in row if not unicode(i).isnumeric()] + [i for i in row if unicode(i).isnumeric()]
+            #print [str(i) for i in row if not unicode(i).isnumeric()] + [i for i in row if unicode(i).isnumeric()]
+            print [str(i) for i in row if not is_number(i)] + [i for i in row if is_number(i)]
         print "Results: " + str(len(rows))
     except sqlite3.OperationalError:
         print "Invalid SQL"
@@ -137,22 +143,33 @@ def init_db(conn):
     import glob
     for file in glob.glob("data/turnstile_*.txt"):
         parse_turnstile_file(file, c)
-    
-    try:
+        
+    try:            
         c.execute('''DROP TABLE turnstile_totals''')
     except sqlite3.OperationalError:
         print "turnstile_totals could not be dropped"
     c.execute('''CREATE TABLE turnstile_totals
+                (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name)''')    
+    #Records that don't make sense will go here instead. 
+    try:
+        c.execute('''DROP TABLE turnstile_totals_errors''')
+    except sqlite3.OperationalError:
+        print "turnstile_totals_errors could not be dropped"
+    c.execute('''CREATE TABLE turnstile_totals_errors
                 (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name)''')
     #To get daily totals, we compare the starting and ending values.
     c.execute('''select * from raw_data where TIME = "00:00:00"''')
     starts = c.fetchall()
     for i in xrange(len(starts) - 1):
         #If the first three elements match, then it is the same turnstile on two consecutive days.
-        #May want to also check that the date on the second one is the day after the first one, but they data is already sorted, so it shouldn't be a big deal.
+        #May want to also check that the date on the second one is the day after the first one, but the data is already sorted, so it shouldn't be a big deal.
         if starts[i][0] == starts[i+1][0] and starts[i][1] == starts[i+1][1] and starts[i][2] == starts[i+1][2]:
             t = (starts[i][0], starts[i][1], starts[i][2], starts[i][3], starts[i+1][5] - starts[i][5], starts[i+1][6] - starts[i][6], starts[i][7])
-            c.execute('INSERT INTO turnstile_totals VALUES (?,?,?,?,?,?,?)', t)
+            #We do have to check though that the entry/exit data is increasing. If they aren't, put them instead in the error table for future reference.
+            if starts[i+1][5] - starts[i][5] < 0 or starts[i+1][6] - starts[i][6] < 0:
+                c.execute('INSERT INTO turnstile_totals_errors VALUES (?,?,?,?,?,?,?)', t)
+            else:
+                c.execute('INSERT INTO turnstile_totals VALUES (?,?,?,?,?,?,?)', t)
             
     #Now lets do station totals.
     try:
