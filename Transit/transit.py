@@ -16,7 +16,7 @@ def main():
     /       Show stations with the highest ratio of entrances/exits.
     +       Show stations with the greatest difference between entrances and exits.
     crowded Show stations with the greatest entries per turnstile.
-    annual  Calculate annual totals
+    annual  Calculate annual totals for 2011 (only full year with data).
     
     Any other input is interpreted as an SQL command with results displayed.
     
@@ -142,7 +142,7 @@ def init_db(conn):
     except sqlite3.OperationalError:
         print "raw_data could not be dropped"
     c.execute('''CREATE TABLE raw_data
-                 (CA text, UNIT text, SCP text, DATE text, TIME text, ENTRIES integer, EXITS integer, stop_name)''')
+                 (CA text, UNIT text, SCP text, DATE text, TIME text, ENTRIES integer, EXITS integer, stop_name text)''')
     
     #Let's build a table of stop names
     #These will be associated with the turnstile data
@@ -163,14 +163,14 @@ def init_db(conn):
     except sqlite3.OperationalError:
         print "turnstile_totals could not be dropped"
     c.execute('''CREATE TABLE turnstile_totals
-                (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name)''')    
+                (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name text)''')    
     #Records that don't make sense will go here instead. 
     try:
         c.execute('''DROP TABLE turnstile_totals_errors''')
     except sqlite3.OperationalError:
         print "turnstile_totals_errors could not be dropped"
     c.execute('''CREATE TABLE turnstile_totals_errors
-                (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name)''')
+                (CA text, UNIT text, SCP text, DATE text, ENTRIES integer, EXITS integer, stop_name text)''')
     #To get daily totals, we compare the starting and ending values.
     c.execute('''select * from raw_data where TIME = "00:00:00"''')
     starts = c.fetchall()
@@ -318,7 +318,7 @@ def construct_year_totals(conn):
     except sqlite3.OperationalError:
         print "annual_totals could not be dropped"
     c.execute('''CREATE TABLE annual_totals
-                (CA text, UNIT text, SCP text, ENTRIES integer, EXITS integer, stop_name)''')
+                (CA text, UNIT text, SCP text, ENTRIES integer, EXITS integer, stop_name text)''')
     print "annual_totals created"
     c.execute('''SELECT CA, UNIT, SCP, sum(ENTRIES), sum(EXITS), stop_name
                 FROM turnstile_totals
@@ -329,6 +329,25 @@ def construct_year_totals(conn):
     for line in totals:
         c.execute('INSERT INTO annual_totals VALUES (?,?,?,?,?,?)', line)
     print "annual_totals populated"
+    conn.commit()
+    
+    #Now lets compile those into totals by station.
+    try:            
+        c.execute('''DROP TABLE annual_totals_by_name''')
+        print "annual_totals_by_name dropped"
+    except sqlite3.OperationalError:
+        print "annual_totals_by_name could not be dropped"
+    c.execute('''CREATE TABLE annual_totals_by_name
+                (stop_name text, turnstile_count integer, ENTRIES integer, EXITS integer)''')
+    print "annual_totals_by_name created"
+    c.execute('''SELECT stop_name, COUNT(*), sum(ENTRIES), sum(EXITS)
+                FROM annual_totals
+                GROUP BY stop_name''')
+    
+    totals = c.fetchall()
+    for line in totals:
+        c.execute('INSERT INTO annual_totals_by_name VALUES (?,?,?,?)', line)
+    print "annual_totals_by_name populated"
     conn.commit()
     
 if __name__ == "__main__":
