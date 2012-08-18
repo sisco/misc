@@ -16,6 +16,7 @@ def main():
     /       Show stations with the highest ratio of entrances/exits.
     +       Show stations with the greatest difference between entrances and exits.
     crowded Show stations with the greatest entries per turnstile.
+    annual  Calculate annual totals
     
     Any other input is interpreted as an SQL command with results displayed.
     
@@ -82,6 +83,9 @@ def main():
             print "Stop name, Date, Entries, # turnstiles, Ratio"
             query = "select stop_name, date, entries, turnstile_count, ROUND((CAST(entries AS REAL)/turnstile_count), 2) as ratio from station_totals order by ratio DESC limit 10"
             print_all_rows(c, query)
+            
+        elif x == "annual":
+            construct_year_totals(conn)
         elif x == "b":
             #b for builtin, execute whatever line is put here
             
@@ -178,6 +182,8 @@ def init_db(conn):
             #We do have to check though that the entry/exit data is increasing. If they aren't, put them instead in the error table for future reference.
             if starts[i+1][5] - starts[i][5] < 0 or starts[i+1][6] - starts[i][6] < 0:
                 c.execute('INSERT INTO turnstile_totals_errors VALUES (?,?,?,?,?,?,?)', t)
+                #As of 8/17/12, this table has a size of 391 rows compared to 1,255,641 in the main turnstile_totals table.
+                #This amounts to 0.031139473% of the data being ignored, but it could still be important so I'll try to look into it.
             else:
                 c.execute('INSERT INTO turnstile_totals VALUES (?,?,?,?,?,?,?)', t)
             
@@ -224,7 +230,7 @@ def parse_turnstile_file(file, c):
         SCP = pieces[2]
         #This loop has us iterate over each date/time/entries/exits set.
         for i in xrange(3, len(pieces) - 5, 5):
-            if UNIT in names:
+            if UNIT in names: 
                 t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], names[UNIT])
             else:
                 t = (CA, UNIT, SCP, pieces[i], pieces[i+1], pieces[i+3], pieces[i+4], UNIT)
@@ -302,6 +308,29 @@ def download_new_turnstile_files():
                     links.write(url)
                     print "Downloaded:" + url
                 
+def construct_year_totals(conn):
+    #Given the database connections, create a table of annual totals for 2011, the only full year with data.
+    c = conn.cursor()
+    #These totals are by turnstile
+    try:            
+        c.execute('''DROP TABLE annual_totals''')
+        print "annual_totals dropped"
+    except sqlite3.OperationalError:
+        print "annual_totals could not be dropped"
+    c.execute('''CREATE TABLE annual_totals
+                (CA text, UNIT text, SCP text, ENTRIES integer, EXITS integer, stop_name)''')
+    print "annual_totals created"
+    c.execute('''SELECT CA, UNIT, SCP, sum(ENTRIES), sum(EXITS), stop_name
+                FROM turnstile_totals
+                WHERE DATE LIKE "__-__-11"
+                GROUP BY CA, UNIT, SCP''')
+    
+    totals = c.fetchall()
+    for line in totals:
+        c.execute('INSERT INTO annual_totals VALUES (?,?,?,?,?,?)', line)
+    print "annual_totals populated"
+    conn.commit()
+    
 if __name__ == "__main__":
     print main()
     
