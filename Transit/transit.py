@@ -86,6 +86,29 @@ def main():
             
         elif x == "annual":
             construct_year_totals(conn)
+            
+        elif x == "common":
+            #Find stations in common between lists of stations with most entries and most entries/turnstile
+            print "The busiest stations that are also the busiest per turnstile."
+            result_count = 0
+            num = 25
+            goal = 10
+            while result_count < goal:
+                x = '''SELECT stop_name
+                        FROM (select stop_name, entries from annual_totals_by_name order by entries desc limit {0})
+                        WHERE stop_name IN
+                             (select stop_name from annual_totals_by_name order by ROUND((CAST(entries AS REAL)/turnstile_count), 2) DESC limit {0})
+                        ORDER BY entries
+                    '''.format(num)
+                c.execute(x)
+                rows = c.fetchall()
+                result_count = len(rows)
+                num += 1
+            else:
+                for row in rows:
+                    print [str(i) for i in row if not is_number(i)] + [i for i in row if is_number(i)]
+                print 'Needed to compare the Top {0} Lists to find {1} stations in common.'.format(num, goal)
+                   
         elif x == "b":
             #b for builtin, execute whatever line is put here
             
@@ -94,7 +117,11 @@ def main():
             #x = "select * from turnstile_totals where stop_name = 'FULTON ST'"
             #x = "select * from turnstile_totals where UNIT = 'R36'"
             #x = "select * from turnstile_totals where UNIT = 'R085' and date = '07-14-12'"
-            x = "select * from station_totals where stop_name = 'ST. GEORGE' order by ENTRIES desc"
+            #x = "select * from station_totals where stop_name = 'ST. GEORGE' order by ENTRIES desc"
+            
+            x = "select stop_name, turnstile_count, entries, ROUND((CAST(entries AS REAL)/turnstile_count), 2) as ratio from annual_totals_by_name order by ratio DESC limit 10"
+            print_all_rows(c, x)
+            x = "select * from annual_totals_by_name order by entries desc limit 10"
             print_all_rows(c, x)
         else:
             
